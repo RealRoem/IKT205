@@ -117,3 +117,92 @@ app.*.symbols
 !**/ios/**/default.perspectivev3
 !/packages/flutter_tools/test/data/dart_dependencies_test/**/.packages
 !/dev/ci/**/Gemfile.lock
+
+
+
+
+# -------------- REACT NATIVE ---------------
+
+
+
+
+
+# Node
+node_modules/
+npm-debug.*
+yarn-error.log
+# yarn-debug.log* # uncomment this if needed
+
+# Metro
+.bundle/
+
+# Xcode
+build/
+*.pbxuser
+!default.pbxuser
+*.mode1v3
+!default.mode1v3
+*.mode2v3
+!default.mode2v3
+*.perspectivev3
+!default.perspectivev3
+*.xcworkspace
+!default.xcworkspace
+xcuserdata
+*.xccheckout
+*.moved-aside
+DerivedData
+*.hmap
+*.xcsigningdata
+*.simprofile
+*.swiftpm/
+.swiftpm/
+
+# Android
+.gradle/
+.idea/
+.cxx/
+*.apk
+*.ap_
+*.Aar
+*.class
+*.dex
+*.jar
+*.keystore
+*.orig
+build/
+captures/
+packagename.txt
+# local.properties # check in your local.properties file if you want to share the SDK location with others
+
+# Watchman
+.watchman/
+
+# detox
+.detoxrc.js
+*.js.enc
+
+# expo
+.expo/
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# IDEs and other
+.vscode/
+*.log
+*.rn-codegen-output
+web-build/
