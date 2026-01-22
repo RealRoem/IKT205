@@ -1,60 +1,65 @@
-﻿import React, { createContext, useContext, useMemo, useState } from "react";
+﻿// src/notes/NotesContext.tsx
+import React, { createContext, useContext, useMemo, useState } from "react";
 
 export type Note = {
     id: string;
     title: string;
     content: string;
     createdAt: number;
+    updatedAt: number;
 };
-
-type Draft = { title: string; content: string };
 
 type NotesContextType = {
     notes: Note[];
-    addNote: (note: Omit<Note, "id" | "createdAt">) => void;
-
-    draft: Draft;
-    setDraftTitle: (v: string) => void;
-    setDraftContent: (v: string) => void;
-    resetDraft: () => void;
-    saveDraft: () => boolean; // true hvis lagret, false hvis tomt
+    createNote: () => Note; // lager tom note og returnerer den
+    deleteNote: (id: string) => void;
+    updateNote: (id: string, patch: Partial<Pick<Note, "title" | "content">>) => void;
+    getNoteById: (id: string) => Note | undefined;
 };
 
 const NotesContext = createContext<NotesContextType | null>(null);
 
 export function NotesProvider({ children }: { children: React.ReactNode }) {
     const [notes, setNotes] = useState<Note[]>([]);
-    const [draft, setDraft] = useState<Draft>({ title: "", content: "" });
 
-    const addNote = (note: Omit<Note, "id" | "createdAt">) => {
-        const newNote: Note = {
-            id: Date.now().toString(),
-            createdAt: Date.now(),
-            title: note.title.trim(),
-            content: note.content.trim(),
+    const createNote = () => {
+        const now = Date.now();
+        const note: Note = {
+            id: now.toString(),
+            createdAt: now,
+            updatedAt: now,
+            title: "",
+            content: "",
         };
-        setNotes((prev) => [newNote, ...prev]);
+        setNotes((prev) => [note, ...prev]);
+        return note;
     };
 
-    const setDraftTitle = (v: string) => setDraft((d) => ({ ...d, title: v }));
-    const setDraftContent = (v: string) => setDraft((d) => ({ ...d, content: v }));
-    const resetDraft = () => setDraft({ title: "", content: "" });
+    const deleteNote = (id: string) => {
+        setNotes((prev) => prev.filter((n) => n.id !== id));
+    };
 
-    const saveDraft = () => {
-        const title = draft.title.trim();
-        const content = draft.content.trim();
+    const getNoteById = (id: string) => notes.find((n) => n.id === id);
 
-        // Ikke lagre helt tomme notater
-        if (!title && !content) return false;
-
-        addNote({ title, content });
-        resetDraft();
-        return true;
+    const updateNote = (id: string, patch: Partial<Pick<Note, "title" | "content">>) => {
+        setNotes((prev) =>
+            prev.map((n) =>
+                n.id === id
+                    ? {
+                        ...n,
+                        ...patch,
+                        title: (patch.title ?? n.title),
+                        content: (patch.content ?? n.content),
+                        updatedAt: Date.now(),
+                    }
+                    : n
+            )
+        );
     };
 
     const value = useMemo(
-        () => ({ notes, addNote, draft, setDraftTitle, setDraftContent, resetDraft, saveDraft }),
-        [notes, draft]
+        () => ({ notes, createNote, deleteNote, updateNote, getNoteById }),
+        [notes]
     );
 
     return <NotesContext.Provider value={value}>{children}</NotesContext.Provider>;

@@ -1,26 +1,23 @@
-import { Stack } from "expo-router";
-import { View, StyleSheet, Pressable } from "react-native";
+// app/_layout.tsx
+import { Stack, router, usePathname } from "expo-router";
+import { View, StyleSheet, Pressable, Alert } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
+import Svg, { Path } from "react-native-svg";
 
 import { ThemeProvider, useTheme } from "@/src/theme/ThemeContext";
+import { NotesProvider, useNotes } from "@/src/notes/NotesContext";
 import { Shadow, Spacing, Radius } from "@/constants/theme";
 import { ThemeIcon } from "@/components/ui/ThemeIcon";
 
-import { usePathname, useRouter } from "expo-router";
-import Svg, { Path } from "react-native-svg";
-
-import {NotesProvider, useNotes } from "@/src/notes/NotesContext";
-
-
-
 function LayoutContent() {
     const { mode, setMode, colors } = useTheme();
-
-    const router = useRouter();
     const pathname = usePathname();
-    const isNote = pathname === "/note";
 
-    const { saveDraft, resetDraft } = useNotes();
+    // In-editor = /note/<id>
+    const isInNote = pathname.startsWith("/note/");
+    const noteId = isInNote ? pathname.split("/")[2] : null;
+
+    const { deleteNote } = useNotes();
 
     return (
         <View style={[styles.screen, { backgroundColor: colors.bg }]}>
@@ -33,7 +30,7 @@ function LayoutContent() {
             />
 
             <Pressable
-                onPress={() => setMode(m => (m === "light" ? "dark" : "light"))}
+                onPress={() => setMode((m) => (m === "light" ? "dark" : "light"))}
                 style={[
                     styles.themeButton,
                     { backgroundColor: colors.s2, borderColor: colors.border },
@@ -45,12 +42,25 @@ function LayoutContent() {
 
             <Pressable
                 onPress={() => {
-                    if (isNote) {
-                        const saved = saveDraft();
-                        if (!saved) resetDraft();
-                        router.back();
+                    if (isInNote && noteId) {
+                        Alert.alert(
+                            "Delete note?",
+                            "This cannot be undone.",
+                            [
+                                { text: "Cancel", style: "cancel" },
+                                {
+                                    text: "Delete",
+                                    style: "destructive",
+                                    onPress: () => {
+                                        deleteNote(noteId);
+                                        router.back();
+                                    },
+                                },
+                            ]
+                        );
                     } else {
-                        router.push("/note");
+                        // /note (app/note/index.tsx) skal opprette ny note og router.replace til /note/<id>
+                        router.push({ pathname: "/note" });
                     }
                 }}
                 style={[
@@ -59,14 +69,15 @@ function LayoutContent() {
                     Shadow.near,
                 ]}
             >
-                {isNote ? (
-                    // Save icon
+                {isInNote ? (
+                    // Trash icon
                     <Svg width={26} height={26} viewBox="0 0 24 24">
                         <Path
-                            d="M5 3h11l3 3v15H5z M7 3v6h8V3"
+                            d="M4 7h16M10 11v6M14 11v6M6 7l1 14h10l1-14M9 7V4h6v3"
                             stroke={colors.text}
                             strokeWidth={2}
                             fill="none"
+                            strokeLinecap="round"
                             strokeLinejoin="round"
                         />
                     </Svg>
@@ -126,5 +137,4 @@ const styles = StyleSheet.create({
         zIndex: 100,
         elevation: 10,
     },
-
 });

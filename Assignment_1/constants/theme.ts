@@ -3,15 +3,15 @@ import { Platform } from "react-native";
 
 export const Fonts = Platform.select({
   ios: {
-    sans: "system-ui",
-    serif: "ui-serif",
-    rounded: "ui-rounded",
-    mono: "ui-monospace",
+    sans: "System",
+    serif: "Georgia",
+    rounded: "System",
+    mono: "Menlo",
   },
-  default: {
-    sans: "normal",
+  android: {
+    sans: "sans-serif",
     serif: "serif",
-    rounded: "normal",
+    rounded: "sans-serif",
     mono: "monospace",
   },
   web: {
@@ -20,7 +20,14 @@ export const Fonts = Platform.select({
     rounded: "'SF Pro Rounded', 'Hiragino Maru Gothic ProN', Meiryo, 'MS PGothic', sans-serif",
     mono: "SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
   },
+  default: {
+    sans: "System",
+    serif: "serif",
+    rounded: "System",
+    mono: "monospace",
+  },
 });
+
 
 export const Spacing = {
   XS: 8,
@@ -37,10 +44,10 @@ export const Radius = {
 } as const;
 
 export const Typography = {
-  h1: { fontSize: 40, lineHeight: 40, fontFamily: Fonts?.sans },
-  h2: { fontSize: 24, lineHeight: 24, fontFamily: Fonts?.sans },
-  p:  { fontSize: 20, lineHeight: 20, fontFamily: Fonts?.sans },
-  meta:{ fontSize: 16, lineHeight: 16, fontFamily: Fonts?.sans },
+  h1: { fontSize: 32, lineHeight: 32, fontFamily: Fonts?.sans, fontWeight: 700, paddingBottom: Spacing.M },
+  h2: { fontSize: 18, lineHeight: 24, fontFamily: Fonts?.sans, fontWeight: 700, paddingBottom: Spacing.XS },
+  p:  { fontSize: 18, lineHeight: 20, fontFamily: Fonts?.sans },
+  meta:{ fontSize: 14, lineHeight: 16, fontFamily: Fonts?.sans },
 } as const;
 
 /**

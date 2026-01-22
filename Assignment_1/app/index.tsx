@@ -1,8 +1,11 @@
-import { View, StyleSheet, FlatList } from "react-native";
+import {View, StyleSheet, FlatList, Pressable} from "react-native";
 import { useTheme } from "@/src/theme/ThemeContext";
 import { useNotes } from "@/src/notes/NotesContext";
 import { Spacing, Radius, Shadow, Typography } from "@/constants/theme";
 import { Text } from "react-native";
+import { router } from "expo-router";
+
+
 
 export default function HomeScreen() {
     const { colors } = useTheme();
@@ -17,17 +20,18 @@ export default function HomeScreen() {
                 columnWrapperStyle={{ gap: Spacing.XS }}
                 contentContainerStyle={{
                     padding: Spacing.S,
-                    gap: Spacing.S,
+                    gap: Spacing.XS,
                     paddingTop: Spacing.L
                 }}
                 renderItem={({ item }) => (
-                    <View
+                    <Pressable
+                        onPress={() => {
+                            // naviger til edit med id
+                            router.push({ pathname: "/note/[id]", params: { id: item.id } });
+                        }}
                         style={[
                             styles.card,
-                            {
-                                backgroundColor: colors.s1,
-                                borderColor: colors.border,
-                            },
+                            { backgroundColor: colors.s1, borderColor: colors.border },
                             Shadow.far,
                         ]}
                     >
@@ -40,11 +44,11 @@ export default function HomeScreen() {
 
                         <Text
                             style={[Typography.meta, { color: colors.textMuted }]}
-                            numberOfLines={3}
+                            numberOfLines={8}
                         >
                             {item.content}
                         </Text>
-                    </View>
+                    </Pressable>
                 )}
             />
         </View>
