@@ -206,3 +206,10 @@ Desktop.ini
 *.log
 *.rn-codegen-output
 web-build/
+
+
+
+
+# zip filer
+*.7z
+*.zip
