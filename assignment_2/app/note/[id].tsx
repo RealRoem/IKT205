@@ -1,56 +1,139 @@
-﻿// app/note/[id].tsx
 import {
     StyleSheet,
     TextInput,
     ScrollView,
-    Platform,
     View,
 } from "react-native";
-import { useEffect, useRef, useState } from "react";
-import { useLocalSearchParams } from "expo-router";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Redirect, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useFocusEffect } from "@react-navigation/native";
 
 import { Spacing, Typography } from "@/constants/theme";
 import { useTheme } from "@/src/theme/ThemeContext";
 import { useNotes } from "@/src/notes/NotesContext";
+import { useAuthContext } from "@/hooks/auth-context";
+import { useNoteScreenContext } from "@/hooks/note-screen-context";
+import { ThemedText } from "@/components/themed-text";
+import TopFade from "@/components/ui/TopFade";
 
 export default function NoteScreen() {
     const { colors } = useTheme();
+    const { isLoggedIn, isLoading, user } = useAuthContext();
+    const { id } = useLocalSearchParams<{ id: string }>();
+    const { getNoteById, refreshNotes } = useNotes();
+    const note = id ? getNoteById(id) : undefined;
+
+    useEffect(() => {
+        if (!note) {
+            refreshNotes();
+        }
+    }, [id, note]);
+
+    if (isLoading) return null;
+    if (!id) return <Redirect href="/" />;
+
+    if (!note) {
+        return <View style={[styles.flex, { backgroundColor: colors.bg }]} />;
+    }
+
+    return <NoteScreenContent noteId={id} />;
+}
+
+function NoteScreenContent({ noteId }: { noteId: string }) {
+    const { colors } = useTheme();
+    const { user, isLoggedIn } = useAuthContext();
+    const { getNoteById, updateNote } = useNotes();
+    const noteCtx = useNoteScreenContext();
     const insets = useSafeAreaInsets();
     const contentRef = useRef<TextInput>(null);
     const scrollRef = useRef<ScrollView>(null);
 
-    const { id } = useLocalSearchParams<{ id: string }>();
-    const { getNoteById, updateNote } = useNotes();
+    const note = getNoteById(noteId);
+    const [title, setTitle] = useState(note?.title ?? "");
+    const [content, setContent] = useState(note?.content ?? "");
+    const lastSavedRef = useRef({
+        title: (note?.title ?? "").trim(),
+        content: (note?.content ?? "").trim(),
+    });
 
-    const note = id ? getNoteById(id) : undefined;
-    const [title, setTitle] = useState("");
-    const [content, setContent] = useState("");
-
+    // Sync from server only when the note itself changes (id swap / initial fetch),
+    // never while the user is actively typing to avoid cursor jumps.
     useEffect(() => {
         if (!note) return;
-        setTitle(note.title);
-        setContent(note.content);
+        setTitle(note.title ?? "");
+        setContent(note.content ?? "");
+        lastSavedRef.current = {
+            title: (note.title ?? "").trim(),
+            content: (note.content ?? "").trim(),
+        };
     }, [note?.id]);
 
-    useEffect(() => {
-        if (!id || !note) return;
-        const t = setTimeout(() => {
-            if (title !== note.title || content !== note.content) {
-                updateNote(id, { title, content });
-            }
-        }, 300);
-        return () => clearTimeout(t);
-    }, [id, title, content]);
+    const canEdit = !!(
+        note &&
+        isLoggedIn &&
+        user?.id &&
+        (note.author_id ? note.author_id === user.id : true)
+    );
 
-    if (!id || !note) return <View style={[styles.flex, { backgroundColor: colors.bg }]} />;
+    useEffect(() => {
+        noteCtx.setMeta({
+            noteId,
+            canEdit,
+        });
+        return () => noteCtx.setMeta(null);
+    }, [noteId, canEdit]);
+
+    const ownerLabel = canEdit ? "you" : "other";
+
+    const persist = useCallback(async () => {
+        if (!note || !canEdit) return;
+        const trimmedContent = content.trim();
+        if (trimmedContent.length === 0) return;
+        const trimmedTitle = title.trim();
+        const nextTitle = trimmedTitle === "" ? "Untitled" : trimmedTitle;
+
+        if (
+            trimmedContent === lastSavedRef.current.content &&
+            nextTitle === lastSavedRef.current.title
+        ) {
+            return;
+        }
+
+        try {
+            await updateNote(noteId, { title: nextTitle, content: trimmedContent });
+            lastSavedRef.current = { title: nextTitle, content: trimmedContent };
+        } catch (err) {
+            console.error("Save failed", err);
+        }
+    }, [note, canEdit, content, title, noteId, updateNote]);
+
+    // Rolling save on every change (debounced slightly)
+    useEffect(() => {
+        if (!note || !canEdit) return;
+        const t = setTimeout(() => {
+            persist();
+        }, 250);
+        return () => clearTimeout(t);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [title, content, canEdit, noteId]);
+
+    // Save once when leaving the screen
+    useFocusEffect(
+        useCallback(() => {
+            return () => {
+                persist();
+            };
+        }, [persist])
+    );
+
+    if (!note) {
+        return <View style={[styles.flex, { backgroundColor: colors.bg }]} />;
+    }
 
     return (
         <View style={[styles.flex, { backgroundColor: colors.bg }]}>
-            {/* BRUTAL FIX: Vi fjerner KeyboardAvoidingView.
-               ScrollView med automaticallyAdjustKeyboardInsets håndterer
-               plassen mye bedre alene uten å "dobbel-pushe".
-            */}
+            <TopFade />
             <ScrollView
                 ref={scrollRef}
                 style={styles.flex}
@@ -62,11 +145,18 @@ export default function NoteScreen() {
                     }
                 ]}
                 keyboardShouldPersistTaps="handled"
-                // Dette er den eneste proppen du trenger for smooth scroll på iOS
                 automaticallyAdjustKeyboardInsets={true}
                 keyboardDismissMode="interactive"
                 scrollEventThrottle={16}
             >
+                <ThemedText
+                    style={[
+                        styles.ownerText,
+                        { color: colors.textMuted, top: insets.top + Spacing.S },
+                    ]}
+                >
+                    owner: {ownerLabel}
+                </ThemedText>
                 <TextInput
                     placeholder="New title"
                     value={title}
@@ -76,7 +166,8 @@ export default function NoteScreen() {
                     returnKeyType="next"
                     onSubmitEditing={() => contentRef.current?.focus()}
                     blurOnSubmit={false}
-                    selectionColor={colors.text}
+                    selectionColor={colors.primary}
+                    editable={canEdit}
                 />
 
                 <TextInput
@@ -89,7 +180,8 @@ export default function NoteScreen() {
                     placeholderTextColor={colors.textMuted}
                     style={[styles.content, { color: colors.text }]}
                     scrollEnabled={false}
-                    selectionColor={colors.text}
+                    selectionColor={colors.primary}
+                    editable={canEdit}
                 />
             </ScrollView>
         </View>
@@ -97,7 +189,7 @@ export default function NoteScreen() {
 }
 
 const styles = StyleSheet.create({
-    flex: { flex: 1 },
+    flex: { flex: 1, position: "relative" },
     container: {
         flexGrow: 1,
         paddingHorizontal: Spacing.M,
@@ -112,5 +204,10 @@ const styles = StyleSheet.create({
         minHeight: 300,
         ...Typography.p,
         lineHeight: 24,
+    },
+    ownerText: {
+        fontSize: 11,
+        position: "absolute",
+        right: Spacing.S,
     },
 });

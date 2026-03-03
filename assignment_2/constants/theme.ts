@@ -58,13 +58,13 @@ export const Typography = {
  */
 export const Colors = {
   light: {
-    s2: "#FFFFFF",
-    s1: "#F6F7F8",
-    bg: "#ECEEF0",
-    text: "#0F1720",
-    textMuted: "#5B6673",
-    border: "#D9DEE3",
-    primary: "#0A7EA4",
+    s2: "#FFF8F1",
+    s1: "#F7EFE6",
+    bg: "#F2E9E1",
+    text: "#1F1A17",
+    textMuted: "#6E6258",
+    border: "#E2D6CA",
+    primary: "#C0723A",
     danger: "#D64545",
   },
   dark: {
@@ -82,15 +82,15 @@ export const Colors = {
 export const Shadow = {
   // “Near” for small UI (inputs/buttons)
   near: Platform.select({
-    ios: { shadowOpacity: 0.10, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
-    android: { elevation: 2 },
-    default: { boxShadow: "0 2px 6px rgba(0,0,0,0.12)" },
+    ios: { shadowOpacity: 0.10, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, shadowColor: "rgba(0,0,0,0.25)" },
+    android: { elevation: 3, shadowColor: "rgba(0,0,0,0.25)" },
+    default: { boxShadow: "0 2px 8px rgba(0,0,0,0.14)" },
   }),
   // “Far” for cards / FAB
   far: Platform.select({
-    ios: { shadowOpacity: 0.14, shadowRadius: 14, shadowOffset: { width: 0, height: 6 } },
-    android: { elevation: 5 },
-    default: { boxShadow: "0 6px 14px rgba(0,0,0,0.18)" },
+    ios: { shadowOpacity: 0.18, shadowRadius: 16, shadowOffset: { width: 0, height: 8 }, shadowColor: "rgba(0,0,0,0.28)" },
+    android: { elevation: 6, shadowColor: "rgba(0,0,0,0.28)" },
+    default: { boxShadow: "0 10px 26px rgba(0,0,0,0.22)" },
   }),
 };
 
