@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "Assignment_2 - Cloud Notes",
-    "slug": "Assignment_2",
+    "name": "Assignment_3 - Native Functions",
+    "slug": "Assignment_3",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "assignment2",
+    "scheme": "assignment3",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
@@ -28,6 +28,13 @@
     },
     "plugins": [
       "expo-router",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow access to your photo library so you can attach images to notes.",
+          "cameraPermission": "Allow camera access so you can take photos and attach them to notes."
+        }
+      ],
       [
         "expo-splash-screen",
         {
