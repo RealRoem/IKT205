@@ -46,7 +46,7 @@ const formatLastEdited = (updatedAt: string | null, createdAt: string) => {
 export default function NoteScreen() {
     const { colors } = useTheme();
     const { isLoading } = useAuthContext();
-    const { id } = useLocalSearchParams<{ id: string }>();
+    const { id, openImages } = useLocalSearchParams<{ id: string; openImages?: string }>();
     const { getNoteById, refreshNotes } = useNotes();
     const note = id ? getNoteById(id) : undefined;
     const requestedRef = useRef<string | null>(null);
@@ -62,10 +62,10 @@ export default function NoteScreen() {
     if (!id) return <Redirect href="/" />;
     if (!note) return <View style={[styles.screen, { backgroundColor: colors.bg }]} />;
 
-    return <NoteScreenContent noteId={id} />;
+    return <NoteScreenContent noteId={id} openImagesOnMount={openImages === "1"} />;
 }
 
-function NoteScreenContent({ noteId }: { noteId: string }) {
+function NoteScreenContent({ noteId, openImagesOnMount = false }: { noteId: string; openImagesOnMount?: boolean }) {
     const { colors } = useTheme();
     const { width } = useWindowDimensions();
     const { user, isLoggedIn } = useAuthContext();
@@ -84,6 +84,7 @@ function NoteScreenContent({ noteId }: { noteId: string }) {
 
     const [imagePanelMounted, setImagePanelMounted] = useState(false);
     const [imagePanelOpen, setImagePanelOpen] = useState(false);
+    const openedFromParamRef = useRef(false);
 
     const panelAnim = useRef(new Animated.Value(0)).current;
     const panelWidth = useMemo(() => Math.min(300, Math.max(220, width * 0.7)), [width]);
@@ -170,7 +171,6 @@ function NoteScreenContent({ noteId }: { noteId: string }) {
     }, [canEdit, persist]);
 
     const openImagePanel = useCallback(() => {
-        if (!canEdit) return;
         setImagePanelMounted(true);
         setImagePanelOpen(true);
         Animated.spring(panelAnim, {
@@ -180,7 +180,13 @@ function NoteScreenContent({ noteId }: { noteId: string }) {
             mass: 0.9,
             useNativeDriver: true,
         }).start();
-    }, [canEdit, panelAnim]);
+    }, [panelAnim]);
+
+    useEffect(() => {
+        if (!openImagesOnMount || openedFromParamRef.current) return;
+        openedFromParamRef.current = true;
+        openImagePanel();
+    }, [openImagesOnMount, openImagePanel]);
 
     const closeImagePanel = useCallback(() => {
         if (!imagePanelMounted) return;
@@ -272,7 +278,7 @@ function NoteScreenContent({ noteId }: { noteId: string }) {
     if (!note) return <View style={[styles.screen, { backgroundColor: colors.bg }]} />;
 
     const ownerLabel = canEdit ? "owner: you" : "owner: other";
-    const lastEditedLabel = `sist endret ${formatLastEdited(note.updated_at, note.created_at)}`;
+    const lastEditedLabel = `edited ${formatLastEdited(note.updated_at, note.created_at)}`;
 
     const panelTranslateX = panelAnim.interpolate({
         inputRange: [0, 1],
@@ -342,36 +348,37 @@ function NoteScreenContent({ noteId }: { noteId: string }) {
                 />
             </ScrollView>
 
-            {canEdit ? (
-                <Animated.View
-                    style={[
-                        styles.imagesHandleWrap,
+            <Animated.View
+                style={[
+                    styles.imagesHandleWrap,
+                    {
+                        top: insets.top + 156,
+                        transform: [{ scale: handleScale }],
+                        opacity: handleOpacity,
+                    },
+                ]}
+            >
+                <Pressable
+                    onPress={openImagePanel}
+                    style={({ pressed }) => [
+                        styles.imagesHandle,
                         {
-                            top: insets.top + 156,
-                            transform: [{ scale: handleScale }],
-                            opacity: handleOpacity,
+                            borderColor: colors.border,
+                            backgroundColor: colors.elevated,
+                            opacity: pressed ? 0.9 : 1,
                         },
+                        Shadow.near,
                     ]}
                 >
-                    <Pressable
-                        onPress={openImagePanel}
-                        style={({ pressed }) => [
-                            styles.imagesHandle,
-                            {
-                                borderColor: colors.border,
-                                backgroundColor: colors.elevated,
-                                opacity: pressed ? 0.9 : 1,
-                            },
-                            Shadow.near,
-                        ]}
-                    >
-                        <Text style={[styles.imagesHandleText, { color: colors.text }]}>IMAGES</Text>
-                    </Pressable>
-                </Animated.View>
-            ) : null}
+                    <Text style={[styles.imagesHandleText, { color: colors.text }]}>image</Text>
+                </Pressable>
+            </Animated.View>
 
             {imagePanelMounted ? (
-                <View style={styles.overlayLayer} pointerEvents="box-none">
+                <Animated.View
+                    style={styles.overlayLayer}
+                    pointerEvents="box-none"
+                >
                     <Animated.View
                         pointerEvents={imagePanelOpen ? "auto" : "none"}
                         style={[
@@ -410,43 +417,49 @@ function NoteScreenContent({ noteId }: { noteId: string }) {
                             ]}
                             keyboardShouldPersistTaps="handled"
                         >
-                            <View style={styles.panelActions}>
-                                <Pressable
-                                    onPress={addFromCamera}
-                                    disabled={isUploadingImages}
-                                    style={({ pressed }) => [
-                                        styles.panelActionBtn,
-                                        {
-                                            borderColor: colors.border,
-                                            backgroundColor: colors.s1,
-                                            opacity: isUploadingImages || pressed ? 0.75 : 1,
-                                        },
-                                    ]}
-                                >
-                                    <Text style={[styles.panelActionText, { color: colors.text }]}>Take photo</Text>
-                                </Pressable>
+                            {canEdit ? (
+                                <View style={styles.panelActions}>
+                                    <Pressable
+                                        onPress={addFromCamera}
+                                        disabled={isUploadingImages}
+                                        style={({ pressed }) => [
+                                            styles.panelActionBtn,
+                                            {
+                                                borderColor: colors.border,
+                                                backgroundColor: colors.s1,
+                                                opacity: isUploadingImages || pressed ? 0.75 : 1,
+                                            },
+                                        ]}
+                                    >
+                                        <Text style={[styles.panelActionText, { color: colors.text }]}>Take photo</Text>
+                                    </Pressable>
 
-                                <Pressable
-                                    onPress={addFromLibrary}
-                                    disabled={isUploadingImages}
-                                    style={({ pressed }) => [
-                                        styles.panelActionBtn,
-                                        {
-                                            borderColor: colors.border,
-                                            backgroundColor: colors.s1,
-                                            opacity: isUploadingImages || pressed ? 0.75 : 1,
-                                        },
-                                    ]}
-                                >
-                                    <Text style={[styles.panelActionText, { color: colors.text }]}>From gallery</Text>
-                                </Pressable>
-                            </View>
+                                    <Pressable
+                                        onPress={addFromLibrary}
+                                        disabled={isUploadingImages}
+                                        style={({ pressed }) => [
+                                            styles.panelActionBtn,
+                                            {
+                                                borderColor: colors.border,
+                                                backgroundColor: colors.s1,
+                                                opacity: isUploadingImages || pressed ? 0.75 : 1,
+                                            },
+                                        ]}
+                                    >
+                                        <Text style={[styles.panelActionText, { color: colors.text }]}>From gallery</Text>
+                                    </Pressable>
+                                </View>
+                            ) : (
+                                <Text style={[styles.emptyImages, { color: colors.textMuted }]}>
+                                    Read-only: only owner can add images.
+                                </Text>
+                            )}
 
                             {uploadError ? (
                                 <Text style={[styles.errorText, { color: colors.danger }]}>{uploadError}</Text>
                             ) : null}
 
-                            {stagedImages.length > 0 ? (
+                            {canEdit && stagedImages.length > 0 ? (
                                 <>
                                     <Text style={[styles.sectionCaption, { color: colors.textMuted }]}>Staged</Text>
                                     <View style={styles.stagedGrid}>
@@ -506,7 +519,7 @@ function NoteScreenContent({ noteId }: { noteId: string }) {
                             )}
                         </ScrollView>
                     </Animated.View>
-                </View>
+                </Animated.View>
             ) : null}
         </View>
     );
@@ -549,7 +562,7 @@ const styles = StyleSheet.create({
     },
     imagesHandle: {
         width: 50,
-        minHeight: 156,
+        minHeight: 100,
         borderTopLeftRadius: 22,
         borderBottomLeftRadius: 22,
         borderTopRightRadius: 0,
@@ -560,8 +573,7 @@ const styles = StyleSheet.create({
         alignItems: "center",
         justifyContent: "center",
         gap: 0,
-        paddingVertical: 10,
-        paddingHorizontal: 6,
+        paddingVertical: 5,
     },
     imagesHandleText: {
         fontSize: 11,

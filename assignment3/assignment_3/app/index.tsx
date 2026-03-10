@@ -21,7 +21,7 @@ const getPreviewLines = (note: Note) => {
     // Add a small wrap estimate for very long lines while still prioritizing
     // user-entered line breaks (including blank/space-only rows).
     const wrappedExtraRows = rows.reduce((sum, row) => sum + Math.max(0, Math.ceil(row.length / 42) - 1), 0);
-    return Math.max(2, Math.min(7, explicitRows + wrappedExtraRows));
+    return Math.max(2, Math.min(6, explicitRows + wrappedExtraRows));
 };
 
 const estimateCardWeight = (note: Note) => {

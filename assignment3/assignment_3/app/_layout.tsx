@@ -12,6 +12,8 @@ import { useAuthContext } from "@/hooks/auth-context";
 import AuthProvider from "@/providers/auth-provider";
 import { supabase } from "@/lib/supabase";
 import { useNoteScreenContext, NoteScreenProvider } from "@/hooks/note-screen-context";
+import { requestLocalNotificationPermission } from "@/src/notifications/localNotifications";
+import { registerExpoPushTokenForUser } from "@/src/notifications/pushTokens";
 
 function RootNavigator() {
     return <Stack screenOptions={{ headerShown: false }} />;
@@ -23,7 +25,7 @@ function LayoutContent() {
     const insets = useSafeAreaInsets();
     const { deleteNote } = useNotes();
     const noteScreen = useNoteScreenContext();
-    const { isLoggedIn } = useAuthContext();
+    const { isLoggedIn, user } = useAuthContext();
     const [menuOpen, setMenuOpen] = useState(false);
     const [keyboardVisible, setKeyboardVisible] = useState(false);
 
@@ -39,6 +41,15 @@ function LayoutContent() {
             hideSub.remove();
         };
     }, []);
+
+    useEffect(() => {
+        void requestLocalNotificationPermission();
+    }, []);
+
+    useEffect(() => {
+        if (!isLoggedIn || !user?.id) return;
+        void registerExpoPushTokenForUser(user.id);
+    }, [isLoggedIn, user?.id]);
 
     const isInNote = pathname.startsWith("/note/");
     const noteId = isInNote ? pathname.split("/")[2] : null;
