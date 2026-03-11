@@ -213,3 +213,5 @@ web-build/
 # zip filer
 *.7z
 *.zip
+
+*.mp4

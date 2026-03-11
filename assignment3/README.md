@@ -10,6 +10,8 @@ brukeren selv være eier av notatet, samme gjelder for sletting.
 
 Appen er testet og funker på både Android og iOS.
 
+For at notifikasjoner skal funke på tvers av enheter må man ha dev client aktivert.
+
 
 ### Kjør i React
 
