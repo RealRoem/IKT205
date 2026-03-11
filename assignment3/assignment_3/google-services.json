@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "792242366646",
+    "project_id": "fast-notes-8407b",
+    "storage_bucket": "fast-notes-8407b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:792242366646:android:94a3e0f5ce6d07105f5e17",
+        "android_client_info": {
+          "package_name": "com.anonymous.Assignment_3"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAVQp33UhC1sxzCHtNK5qpWHTVxroidN4c"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
