@@ -1,5 +1,5 @@
 import { Stack, router, usePathname } from "expo-router";
-import { Alert, Keyboard, Platform, Pressable, StatusBar, StyleSheet, View } from "react-native";
+import { Alert, AppState, Keyboard, Platform, Pressable, StatusBar, StyleSheet, View } from "react-native";
 import { useEffect, useState } from "react";
 import Svg, { Path } from "react-native-svg";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -49,6 +49,17 @@ function LayoutContent() {
     useEffect(() => {
         if (!isLoggedIn || !user?.id) return;
         void registerExpoPushTokenForUser(user.id);
+    }, [isLoggedIn, user?.id]);
+
+    useEffect(() => {
+        if (!isLoggedIn || !user?.id) return;
+
+        const sub = AppState.addEventListener("change", (state) => {
+            if (state !== "active") return;
+            void registerExpoPushTokenForUser(user.id);
+        });
+
+        return () => sub.remove();
     }, [isLoggedIn, user?.id]);
 
     const isInNote = pathname.startsWith("/note/");

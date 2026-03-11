@@ -3,7 +3,6 @@ import * as Notifications from "expo-notifications";
 
 Notifications.setNotificationHandler({
     handleNotification: async () => ({
-        shouldShowAlert: true,
         shouldPlaySound: true,
         shouldSetBadge: false,
         shouldShowBanner: true,
@@ -55,7 +54,7 @@ export const sendLocalNoteCreatedNotification = async () => {
     await Notifications.scheduleNotificationAsync({
         content: {
             title: "Nytt notat",
-            body: "Bruker har opprettet notat.",
+            body: "En bruker har opprettet et notat",
             sound: true,
         },
         trigger: null,

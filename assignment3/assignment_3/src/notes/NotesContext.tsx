@@ -4,7 +4,6 @@ import { supabase } from "@/lib/supabase";
 import { useAuthContext } from "@/hooks/auth-context";
 import * as FileSystemLegacy from "expo-file-system/legacy";
 import { decode as decodeBase64 } from "base64-arraybuffer";
-import { sendLocalNoteCreatedNotification } from "@/src/notifications/localNotifications";
 
 export type Note = {
     id: string;
@@ -222,11 +221,6 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
             setNotes((prev) => [inserted, ...prev]);
             setImagesByNoteId((prev) => ({ ...prev, [inserted.id]: [] }));
             setStatusMessage("Note created.");
-            try {
-                await sendLocalNoteCreatedNotification();
-            } catch (notificationError) {
-                console.error("Error sending local notification:", notificationError);
-            }
             return inserted;
         }
 
