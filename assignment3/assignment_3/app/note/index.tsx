@@ -205,9 +205,9 @@ export default function NoteCreateScreen() {
                     style={({ pressed }) => [
                         styles.imagesHandle,
                         {
-                            borderColor: colors.border,
                             backgroundColor: colors.elevated,
                             opacity: pressed ? 0.9 : 1,
+                            transform: [{ scale: pressed ? 0.988 : 1 }],
                         },
                         Shadow.near,
                     ]}
@@ -254,8 +254,6 @@ const styles = StyleSheet.create({
         borderBottomLeftRadius: 22,
         borderTopRightRadius: 0,
         borderBottomRightRadius: 0,
-        borderRightWidth: 0,
-        borderWidth: 1,
         alignItems: "center",
         justifyContent: "center",
         paddingVertical: 5,

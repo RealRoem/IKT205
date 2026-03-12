@@ -1,5 +1,5 @@
-import React from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import React, { useEffect, useRef } from "react";
+import { Animated, Easing, Pressable, StyleSheet, View } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
 import { MenuIcon, SignOutIcon, ThemeIcon } from "@/components/ui/svg-icons";
@@ -28,90 +28,156 @@ export default function FloatingMenu({
     onThemeToggle,
     onAuthPress,
 }: Props) {
+    const openAnim = useRef(new Animated.Value(isOpen ? 1 : 0)).current;
+
+    useEffect(() => {
+        Animated.timing(openAnim, {
+            toValue: isOpen ? 1 : 0,
+            duration: isOpen ? 360 : 280,
+            easing: isOpen ? Easing.bezier(0.22, 1, 0.36, 1) : Easing.bezier(0.4, 0, 0.2, 1),
+            useNativeDriver: true,
+        }).start();
+    }, [isOpen, openAnim]);
+
+    const panelTranslateY = openAnim.interpolate({
+        inputRange: [0, 1],
+        outputRange: [18, 0],
+    });
+    const panelScale = openAnim.interpolate({
+        inputRange: [0, 1],
+        outputRange: [0.94, 1],
+    });
+    const backdropOpacity = openAnim.interpolate({
+        inputRange: [0, 1],
+        outputRange: [0, 1],
+    });
+    const triggerScale = openAnim.interpolate({
+        inputRange: [0, 1],
+        outputRange: [1, 1.015],
+    });
+
     return (
         <>
-            <Pressable
-                onPress={onToggle}
-                style={({ pressed }) => [
-                    styles.menuButton,
+            <Animated.View
+                style={[
+                    styles.menuButtonWrap,
                     {
-                        backgroundColor: colors.s1,
-                        borderColor: colors.border,
                         bottom: bottomOffset,
-                        opacity: pressed ? 0.86 : 1,
+                        transform: [{ scale: triggerScale }],
                     },
-                    Shadow.near,
                 ]}
             >
-                <MenuIcon color={colors.text} />
-            </Pressable>
+                <Pressable
+                    onPress={onToggle}
+                    style={({ pressed }) => [
+                        styles.menuButton,
+                        {
+                            backgroundColor: colors.s1,
+                            opacity: pressed ? 0.92 : 1,
+                            transform: [{ scale: pressed ? 0.975 : 1 }],
+                        },
+                        styles.menuButtonDepth,
+                        Shadow.near,
+                    ]}
+                >
+                    <MenuIcon color={colors.text} />
+                </Pressable>
+            </Animated.View>
 
-            {isOpen && (
-                <>
-                    <Pressable onPress={onClose} style={styles.menuBackdrop} />
-                    <View
-                        style={[
-                            styles.menuPanel,
+            <Animated.View
+                pointerEvents={isOpen ? "auto" : "none"}
+                style={[
+                    styles.menuBackdrop,
+                    {
+                        opacity: backdropOpacity,
+                    },
+                ]}
+            >
+                <Pressable onPress={onClose} style={styles.menuBackdropPressable} />
+            </Animated.View>
+
+            <Animated.View
+                pointerEvents={isOpen ? "auto" : "none"}
+                style={[
+                    styles.menuPanelWrap,
+                    {
+                        bottom: bottomOffset + 70,
+                        opacity: openAnim,
+                        transform: [{ translateY: panelTranslateY }, { scale: panelScale }],
+                    },
+                ]}
+            >
+                <View
+                    style={[
+                        styles.menuPanel,
+                        {
+                            backgroundColor: colors.elevated,
+                        },
+                        styles.menuPanelDepth,
+                        Shadow.far,
+                    ]}
+                >
+                    <Pressable
+                        onPress={onThemeToggle}
+                        style={({ pressed }) => [
+                            styles.menuRow,
                             {
-                                backgroundColor: colors.elevated,
-                                borderColor: colors.border,
-                                bottom: bottomOffset + 70,
+                                opacity: pressed ? 0.8 : 1,
+                                transform: [{ scale: pressed ? 0.985 : 1 }],
                             },
-                            Shadow.far,
                         ]}
                     >
-                        <Pressable
-                            onPress={onThemeToggle}
-                            style={({ pressed }) => [
-                                styles.menuRow,
-                                {
-                                    opacity: pressed ? 0.72 : 1,
-                                },
-                            ]}
-                        >
-                            <ThemeIcon mode={mode} color={colors.text} />
-                            <View style={styles.menuText}>
-                                <ThemedText style={styles.menuTitle}>Appearance</ThemedText>
-                                <ThemedText style={[styles.menuSubtitle, { color: colors.textMuted }]}>
-                                    {mode === "light" ? "Light" : "Dark"}
-                                </ThemedText>
-                            </View>
-                        </Pressable>
+                        <ThemeIcon mode={mode} color={colors.text} />
+                        <View style={styles.menuText}>
+                            <ThemedText style={styles.menuTitle}>Appearance</ThemedText>
+                            <ThemedText style={[styles.menuSubtitle, { color: colors.textMuted }]}>
+                                {mode === "light" ? "Light" : "Dark"}
+                            </ThemedText>
+                        </View>
+                    </Pressable>
 
-                        <View style={[styles.menuDivider, { backgroundColor: colors.border }]} />
+                    <View style={[styles.menuDivider, { backgroundColor: colors.border }]} />
 
-                        <Pressable
-                            onPress={onAuthPress}
-                            style={({ pressed }) => [
-                                styles.menuRow,
-                                {
-                                    opacity: pressed ? 0.72 : 1,
-                                },
-                            ]}
-                        >
-                            <SignOutIcon color={colors.text} />
-                            <View style={styles.menuText}>
-                                <ThemedText style={styles.menuTitle}>{isLoggedIn ? "Sign out" : "Sign in"}</ThemedText>
-                            </View>
-                        </Pressable>
-                    </View>
-                </>
-            )}
+                    <Pressable
+                        onPress={onAuthPress}
+                        style={({ pressed }) => [
+                            styles.menuRow,
+                            {
+                                opacity: pressed ? 0.8 : 1,
+                                transform: [{ scale: pressed ? 0.985 : 1 }],
+                            },
+                        ]}
+                    >
+                        <SignOutIcon color={colors.text} />
+                        <View style={styles.menuText}>
+                            <ThemedText style={styles.menuTitle}>{isLoggedIn ? "Sign out" : "Sign in"}</ThemedText>
+                        </View>
+                    </Pressable>
+                </View>
+            </Animated.View>
         </>
     );
 }
 
 const styles = StyleSheet.create({
-    menuButton: {
+    menuButtonWrap: {
         position: "absolute",
         left: Spacing.S,
+        zIndex: 60,
+    },
+    menuButton: {
         width: 52,
         height: 52,
-        borderWidth: 1,
         borderRadius: Radius.input,
         alignItems: "center",
         justifyContent: "center",
-        zIndex: 10,
+    },
+    menuButtonDepth: {
+        shadowColor: "#0A1220",
+        shadowOpacity: 0.28,
+        shadowRadius: 18,
+        shadowOffset: { width: 0, height: 10 },
+        elevation: 12,
     },
     menuBackdrop: {
         position: "absolute",
@@ -119,18 +185,29 @@ const styles = StyleSheet.create({
         left: 0,
         right: 0,
         bottom: 0,
-        backgroundColor: "rgba(0,0,0,0.08)",
-        zIndex: 9,
+        backgroundColor: "rgba(0,0,0,0.22)",
+        zIndex: 58,
     },
-    menuPanel: {
+    menuBackdropPressable: {
+        ...StyleSheet.absoluteFillObject,
+    },
+    menuPanelWrap: {
         position: "absolute",
         left: Spacing.S,
+        zIndex: 61,
+    },
+    menuPanel: {
         width: 258,
-        borderWidth: 1,
         borderRadius: Radius.card,
         padding: 10,
         gap: 10,
-        zIndex: 11,
+    },
+    menuPanelDepth: {
+        shadowColor: "#070D17",
+        shadowOpacity: 0.3,
+        shadowRadius: 28,
+        shadowOffset: { width: 0, height: 18 },
+        elevation: 16,
     },
     menuRow: {
         flexDirection: "row",

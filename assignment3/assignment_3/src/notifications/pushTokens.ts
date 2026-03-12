@@ -24,7 +24,6 @@ export const registerExpoPushTokenForUser = async (userId: string) => {
 
     const granted = await requestLocalNotificationPermission();
     if (!granted) {
-        console.log("Push token registration skipped: notification permission not granted.");
         return;
     }
 
@@ -85,7 +84,5 @@ export const registerExpoPushTokenForUser = async (userId: string) => {
 
     if (!saved) {
         console.error("Failed to upsert push token:", lastError);
-    } else {
-        console.log("Expo push token saved for user.");
     }
 };

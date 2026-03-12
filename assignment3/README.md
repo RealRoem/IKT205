@@ -1,19 +1,35 @@
-# Om applikasjonen
+# Assignment 3 - Build and Delivery
 
-Applikasjonen starter med en hjem-skjerm som viser alle notater. Trykker man på et eksisterende notat kan det redigeres.
-For å lage et nytt notat trykker man på pluss-ikonet, og skal man slette det må man trykke på søppelbøtta inne på notatet.
-For å navigere tilbake bruker man vanlig navigasjon på telefon - tilbakeknapp i bunnen eller gestures (det er for cleanere UI).
-For lagring er det implementert auto-save ved nagivasjon tilbake fra et notat, bedre UX enn ved et eksplisitt "lagre" trykk.
+Kort dokumentasjon for innlevering, kravdekning og bygging av appen fra kildekoden.
 
-En bruker kan se alle notater uten å være logget inn, men må logge inn for å skrive et nytt notat. For å endre et notat må
-brukeren selv være eier av notatet, samme gjelder for sletting.
+## Repo
+https://github.com/RealRoem/IKT205
 
-Appen er testet og funker på både Android og iOS.
+## Krav
+- Node.js (LTS)
+- npm
+- Android Studio + Android SDK
+- JDK 17
 
-For at notifikasjoner skal funke på tvers av enheter må man ha dev client aktivert.
+## Installer avhengigheter
+```bash
+npm install
+```
 
+## Miljøvariabler
+Prosjektet bruker `.env.local` med Supabase/Firebase-verdier. Filen ligger i prosjektroten. Github prosjektet vil altså ikke funke uten de.
 
-### Kjør i React
+## Kjør app i utvikling
+```bash
+npx expo start
+```
 
-Åpne terminal og naviger til prosjektmappa (assignment_2). Deretter kjør kommandoen ´´´npx expo start´´´
-Kopier QR-koden i Expo Go appen på telefonen og kjør programmet. Personlig har jeg brukt WebStorm og Expo Go.
+For testing på fysisk Android-enhet med development build:
+```bash
+npx expo run:android --device
+```
+
+## Kjør tester
+```bash
+npm test
+```

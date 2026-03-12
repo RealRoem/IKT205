@@ -35,15 +35,19 @@ const IMAGE_TABLE = "Image";
 const NOTE_IMAGES_BUCKET = process.env.EXPO_PUBLIC_SUPABASE_IMAGE_BUCKET ?? "Images";
 const MAX_IMAGE_SIZE_BYTES = 15 * 1024 * 1024;
 const ALLOWED_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const NOTES_PAGE_SIZE = 5;
 
 type NotesContextType = {
     notes: Note[];
     imagesByNoteId: Record<string, NoteImage[]>;
     isLoading: boolean;
+    isLoadingMore: boolean;
+    hasMoreNotes: boolean;
     error?: string | null;
     statusMessage: string | null;
     clearStatus: () => void;
     refreshNotes: () => Promise<void>;
+    loadMoreNotes: () => Promise<void>;
     createNote: (payload?: { title?: string; content?: string }) => Promise<Note>;
     deleteNote: (id: string) => Promise<void>;
     updateNote: (id: string, patch: Partial<Pick<Note, "title" | "content">>) => Promise<void>;
@@ -135,13 +139,14 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
     const [notes, setNotes] = useState<Note[]>([]);
     const [imagesByNoteId, setImagesByNoteId] = useState<Record<string, NoteImage[]>>({});
     const [isLoading, setIsLoading] = useState<boolean>(false);
+    const [isLoadingMore, setIsLoadingMore] = useState<boolean>(false);
+    const [hasMoreNotes, setHasMoreNotes] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
     const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
-    const refreshImagesForNotes = async (noteIds: string[]) => {
+    const fetchImagesForNotes = async (noteIds: string[]) => {
         if (noteIds.length === 0) {
-            setImagesByNoteId({});
-            return;
+            return {} as Record<string, NoteImage[]>;
         }
 
         const { data, error: imageError } = await supabase
@@ -151,7 +156,7 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
 
         if (imageError) {
             console.error("Error fetching note images:", imageError);
-            return;
+            return {} as Record<string, NoteImage[]>;
         }
 
         const grouped: Record<string, NoteImage[]> = {};
@@ -161,7 +166,7 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
             grouped[normalized.note_id].push(normalized);
         }
 
-        setImagesByNoteId(grouped);
+        return grouped;
     };
 
     const refreshNotes = async () => {
@@ -172,7 +177,8 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
             .from(TABLE)
             .select("*")
             .order("updated_at", { ascending: false })
-            .order("created_at", { ascending: false });
+            .order("created_at", { ascending: false })
+            .range(0, NOTES_PAGE_SIZE - 1);
 
         if (noteError) {
             console.error("Error fetching notes:", noteError);
@@ -180,10 +186,53 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
         } else {
             const nextNotes = (data ?? []).map(normalizeNote);
             setNotes(nextNotes);
-            await refreshImagesForNotes(nextNotes.map((note) => note.id));
+            setHasMoreNotes(nextNotes.length === NOTES_PAGE_SIZE);
+            const images = await fetchImagesForNotes(nextNotes.map((note) => note.id));
+            setImagesByNoteId(images);
         }
 
         setIsLoading(false);
+    };
+
+    const loadMoreNotes = async () => {
+        if (isLoading || isLoadingMore || !hasMoreNotes) return;
+
+        setIsLoadingMore(true);
+        setError(null);
+
+        const start = notes.length;
+        const end = start + NOTES_PAGE_SIZE - 1;
+        const { data, error: noteError } = await supabase
+            .from(TABLE)
+            .select("*")
+            .order("updated_at", { ascending: false })
+            .order("created_at", { ascending: false })
+            .range(start, end);
+
+        if (noteError) {
+            console.error("Error loading more notes:", noteError);
+            setError(noteError.message);
+            setIsLoadingMore(false);
+            return;
+        }
+
+        const nextNotes = (data ?? []).map(normalizeNote);
+        if (nextNotes.length === 0) {
+            setHasMoreNotes(false);
+            setIsLoadingMore(false);
+            return;
+        }
+
+        setHasMoreNotes(nextNotes.length === NOTES_PAGE_SIZE);
+        setNotes((prev) => {
+            const existing = new Set(prev.map((note) => note.id));
+            const uniqueNext = nextNotes.filter((note) => !existing.has(note.id));
+            return [...prev, ...uniqueNext];
+        });
+
+        const images = await fetchImagesForNotes(nextNotes.map((note) => note.id));
+        setImagesByNoteId((prev) => ({ ...prev, ...images }));
+        setIsLoadingMore(false);
     };
 
     useEffect(() => {
@@ -402,10 +451,13 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
             notes,
             imagesByNoteId,
             isLoading,
+            isLoadingMore,
+            hasMoreNotes,
             error,
             statusMessage,
             clearStatus: () => setStatusMessage(null),
             refreshNotes,
+            loadMoreNotes,
             createNote,
             deleteNote,
             updateNote,
@@ -414,7 +466,7 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
             getNoteCoverUrl,
             uploadNoteImage,
         }),
-        [notes, imagesByNoteId, isLoading, error, statusMessage]
+        [notes, imagesByNoteId, isLoading, isLoadingMore, hasMoreNotes, error, statusMessage]
     );
 
     return <NotesContext.Provider value={value}>{children}</NotesContext.Provider>;

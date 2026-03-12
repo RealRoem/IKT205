@@ -16,7 +16,20 @@ import { requestLocalNotificationPermission } from "@/src/notifications/localNot
 import { registerExpoPushTokenForUser } from "@/src/notifications/pushTokens";
 
 function RootNavigator() {
-    return <Stack screenOptions={{ headerShown: false }} />;
+    return (
+        <Stack
+            screenOptions={{
+                headerShown: false,
+                animation: "fade",
+                animationDuration: 380,
+            }}
+        >
+            <Stack.Screen name="index" options={{ animation: "fade", animationDuration: 320 }} />
+            <Stack.Screen name="note/index" options={{ animation: "slide_from_bottom", animationDuration: 420 }} />
+            <Stack.Screen name="note/[id]" options={{ animation: "fade_from_bottom", animationDuration: 420 }} />
+            <Stack.Screen name="login" options={{ animation: "fade_from_bottom", animationDuration: 340 }} />
+        </Stack>
+    );
 }
 
 function LayoutContent() {
@@ -144,10 +157,11 @@ function LayoutContent() {
                             styles.fabButton,
                             {
                                 backgroundColor: canDelete ? colors.danger : colors.primary,
-                                borderColor: colors.border,
                                 bottom: bottomOffset,
-                                opacity: pressed ? 0.88 : 1,
+                                opacity: pressed ? 0.9 : 1,
+                                transform: [{ scale: pressed ? 0.976 : 1 }],
                             },
+                            styles.fabDepth,
                             Shadow.far,
                         ]}
                     >
@@ -201,9 +215,15 @@ const styles = StyleSheet.create({
         width: 58,
         height: 58,
         borderRadius: Radius.fab,
-        borderWidth: 1,
         alignItems: "center",
         justifyContent: "center",
-        zIndex: 10,
+        zIndex: 62,
+    },
+    fabDepth: {
+        shadowColor: "#070D17",
+        shadowOpacity: 0.34,
+        shadowRadius: 26,
+        shadowOffset: { width: 0, height: 16 },
+        elevation: 16,
     },
 });

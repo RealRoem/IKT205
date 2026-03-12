@@ -1,5 +1,5 @@
-import { useEffect, useMemo } from "react";
-import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useEffect, useMemo, useRef } from "react";
+import { ActivityIndicator, Animated, Easing, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Image } from "expo-image";
@@ -53,7 +53,7 @@ const formatNoteCardDate = (updatedAt: string | null, createdAt: string) => {
 export default function HomeScreen() {
     const { colors } = useTheme();
     const { user } = useAuthContext();
-    const { notes, refreshNotes, isLoading, statusMessage, clearStatus, getNoteCoverUrl } = useNotes();
+    const { notes, refreshNotes, loadMoreNotes, hasMoreNotes, isLoading, isLoadingMore, statusMessage, clearStatus, getNoteCoverUrl } = useNotes();
     const [leftColumn, rightColumn] = useMemo(() => {
         const left: Note[] = [];
         const right: Note[] = [];
@@ -80,62 +80,17 @@ export default function HomeScreen() {
         return () => clearTimeout(t);
     }, [statusMessage, clearStatus]);
 
-    const renderCard = (item: Note) => {
-        const isMine = !!(item.author_id && user?.id && item.author_id === user.id);
-        const previewLines = getPreviewLines(item);
-        const lastUpdated = formatNoteCardDate(item.updated_at, item.created_at);
-        const coverUrl = getNoteCoverUrl(item.id);
-        return (
-            <Pressable
-                key={item.id}
-                onPress={() => {
-                    router.push({ pathname: "/note/[id]", params: { id: item.id } });
-                }}
-                style={({ pressed }) => [
-                    styles.card,
-                    {
-                        backgroundColor: colors.s1,
-                        opacity: pressed ? 0.92 : 1,
-                    },
-                    Shadow.far,
-                ]}
-            >
-                {coverUrl ? (
-                    <Image
-                        source={{ uri: coverUrl }}
-                        style={styles.cardImage}
-                        contentFit="cover"
-                        transition={120}
-                    />
-                ) : null}
-
-                <View style={styles.cardTopRow}>
-                    <View style={styles.cardTopLeft}>
-                        <View
-                            style={[
-                                styles.ownerDot,
-                                {
-                                    backgroundColor: isMine ? colors.primary : colors.textMuted,
-                                },
-                            ]}
-                        />
-                        <Text style={[styles.ownerText, { color: colors.textMuted }]}>
-                            {isMine ? "Mine" : "Other"}
-                        </Text>
-                    </View>
-                    <Text style={[styles.updatedText, { color: colors.textMuted }]}>{lastUpdated}</Text>
-                </View>
-
-                <Text style={[Typography.h2, styles.cardTitle, { color: colors.text }]} numberOfLines={1}>
-                    {item.title?.trim() || "Untitled"}
-                </Text>
-
-                <Text style={[styles.cardPreview, { color: colors.textMuted }]} numberOfLines={previewLines}>
-                    {item.content?.trim() || "No content"}
-                </Text>
-            </Pressable>
-        );
-    };
+    const renderCard = (item: Note) => (
+        <LuxuryNoteCard
+            item={item}
+            isMine={!!(item.author_id && user?.id && item.author_id === user.id)}
+            colors={colors}
+            coverUrl={getNoteCoverUrl(item.id)}
+            onPress={() => {
+                router.push({ pathname: "/note/[id]", params: { id: item.id } });
+            }}
+        />
+    );
 
     return (
         <SafeAreaView style={[styles.screen, { backgroundColor: colors.bg }]} edges={["top"]}>
@@ -175,13 +130,135 @@ export default function HomeScreen() {
                         </Text>
                     </View>
                 ) : (
-                    <View style={styles.columnsWrap}>
-                        <View style={styles.column}>{leftColumn.map(renderCard)}</View>
-                        <View style={styles.column}>{rightColumn.map(renderCard)}</View>
-                    </View>
+                    <>
+                        <View style={styles.columnsWrap}>
+                            <View style={styles.column}>{leftColumn.map((note) => (
+                                <View key={note.id} style={styles.cardWrap}>
+                                    {renderCard(note)}
+                                </View>
+                            ))}</View>
+                            <View style={styles.column}>{rightColumn.map((note) => (
+                                <View key={note.id} style={styles.cardWrap}>
+                                    {renderCard(note)}
+                                </View>
+                            ))}</View>
+                        </View>
+
+                        {hasMoreNotes ? (
+                            <Pressable
+                                onPress={() => {
+                                    if (isLoadingMore) return;
+                                    void loadMoreNotes();
+                                }}
+                                style={({ pressed }) => [
+                                    styles.loadMoreButton,
+                                    {
+                                        backgroundColor: colors.s1,
+                                        opacity: pressed || isLoadingMore ? 0.86 : 1,
+                                        transform: [{ scale: pressed ? 0.988 : 1 }],
+                                    },
+                                    Shadow.far,
+                                ]}
+                            >
+                                {isLoadingMore ? (
+                                    <ActivityIndicator size="small" color={colors.text} />
+                                ) : (
+                                    <Text style={[styles.loadMoreText, { color: colors.text }]}>Last mer</Text>
+                                )}
+                            </Pressable>
+                        ) : null}
+                    </>
                 )}
             </ScrollView>
         </SafeAreaView>
+    );
+}
+
+function LuxuryNoteCard({
+    item,
+    isMine,
+    colors,
+    coverUrl,
+    onPress,
+}: {
+    item: Note;
+    isMine: boolean;
+    colors: { s1: string; primary: string; text: string; textMuted: string };
+    coverUrl: string | null;
+    onPress: () => void;
+}) {
+    const scale = useRef(new Animated.Value(1)).current;
+
+    const onPressIn = () => {
+        Animated.timing(scale, {
+            toValue: 0.985,
+            duration: 160,
+            easing: Easing.bezier(0.22, 1, 0.36, 1),
+            useNativeDriver: true,
+        }).start();
+    };
+
+    const onPressOut = () => {
+        Animated.timing(scale, {
+            toValue: 1,
+            duration: 300,
+            easing: Easing.bezier(0.22, 1, 0.36, 1),
+            useNativeDriver: true,
+        }).start();
+    };
+
+    const previewLines = getPreviewLines(item);
+    const lastUpdated = formatNoteCardDate(item.updated_at, item.created_at);
+
+    return (
+        <Animated.View style={{ transform: [{ scale }] }}>
+            <Pressable
+                onPress={onPress}
+                onPressIn={onPressIn}
+                onPressOut={onPressOut}
+                style={[
+                    styles.card,
+                    {
+                        backgroundColor: colors.s1,
+                    },
+                    Shadow.far,
+                ]}
+            >
+                {coverUrl ? (
+                    <Image
+                        source={{ uri: coverUrl }}
+                        style={styles.cardImage}
+                        contentFit="cover"
+                        transition={420}
+                    />
+                ) : null}
+
+                <View style={styles.cardTopRow}>
+                    <View style={styles.cardTopLeft}>
+                        <View
+                            style={[
+                                styles.ownerDot,
+                                {
+                                    backgroundColor: isMine ? colors.primary : colors.textMuted,
+                                },
+                            ]}
+                        />
+                        <Text style={[styles.ownerText, { color: colors.textMuted }]}>
+                            {isMine ? "Mine" : "Other"}
+                        </Text>
+                    </View>
+                    <Text style={[styles.updatedText, { color: colors.textMuted }]}>{lastUpdated}</Text>
+                </View>
+
+                <Text style={[Typography.h2, styles.cardTitle, { color: colors.text }]} numberOfLines={1}>
+                    {item.title?.trim() || "Untitled"}
+                </Text>
+
+                <Text style={[styles.cardPreview, { color: colors.textMuted }]} numberOfLines={previewLines}>
+                    {item.content?.trim() || "No content"}
+                </Text>
+            </Pressable>
+        </Animated.View>
     );
 }
 
@@ -202,7 +279,6 @@ const styles = StyleSheet.create({
     listContent: {
         paddingHorizontal: Spacing.M,
         paddingBottom: 100,
-        gap: CARD_GAP,
     },
     columnsWrap: {
         flexDirection: "row",
@@ -212,6 +288,9 @@ const styles = StyleSheet.create({
     },
     column: {
         flex: 1,
+    },
+    cardWrap: {
+        marginBottom: CARD_GAP,
     },
     emptyListContent: {
         flexGrow: 1,
@@ -234,7 +313,19 @@ const styles = StyleSheet.create({
         borderRadius: Radius.card,
         padding: Spacing.S,
         minHeight: 108,
-        marginBottom: CARD_GAP,
+    },
+    loadMoreButton: {
+        minHeight: 42,
+        borderRadius: Radius.input,
+        alignItems: "center",
+        justifyContent: "center",
+        paddingHorizontal: Spacing.M,
+        marginTop: Spacing.S,
+        marginBottom: Spacing.M,
+    },
+    loadMoreText: {
+        fontSize: 14,
+        fontWeight: "700",
     },
     cardImage: {
         width: "100%",

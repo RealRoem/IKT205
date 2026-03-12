@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Redirect, useLocalSearchParams } from "expo-router";
-import { useFocusEffect } from "@react-navigation/native";
+import { useFocusEffect, useIsFocused } from "@react-navigation/native";
 import {
     ActivityIndicator,
     Animated,
     AppState,
+    Easing,
     Pressable,
     ScrollView,
     StyleSheet,
@@ -50,17 +51,37 @@ export default function NoteScreen() {
     const { getNoteById, refreshNotes } = useNotes();
     const note = id ? getNoteById(id) : undefined;
     const requestedRef = useRef<string | null>(null);
+    const [isFetchingNote, setIsFetchingNote] = useState(false);
 
     useEffect(() => {
         if (!id || note) return;
         if (requestedRef.current === id) return;
         requestedRef.current = id;
-        refreshNotes();
+        let isMounted = true;
+        setIsFetchingNote(true);
+        void refreshNotes().finally(() => {
+            if (isMounted) {
+                setIsFetchingNote(false);
+            }
+        });
+        return () => {
+            isMounted = false;
+        };
     }, [id, note, refreshNotes]);
 
     if (isLoading) return null;
     if (!id) return <Redirect href="/" />;
-    if (!note) return <View style={[styles.screen, { backgroundColor: colors.bg }]} />;
+    if (!note) {
+        if (isFetchingNote) {
+            return (
+                <View style={[styles.screen, styles.loaderWrap, { backgroundColor: colors.bg }]}>
+                    <ActivityIndicator testID="note-loader" size="small" color={colors.text} />
+                </View>
+            );
+        }
+
+        return <View style={[styles.screen, { backgroundColor: colors.bg }]} />;
+    }
 
     return <NoteScreenContent noteId={id} openImagesOnMount={openImages === "1"} />;
 }
@@ -68,6 +89,7 @@ export default function NoteScreen() {
 function NoteScreenContent({ noteId, openImagesOnMount = false }: { noteId: string; openImagesOnMount?: boolean }) {
     const { colors } = useTheme();
     const { width } = useWindowDimensions();
+    const isFocused = useIsFocused();
     const { user, isLoggedIn } = useAuthContext();
     const { getNoteById, updateNote, getNoteImages, uploadNoteImage } = useNotes();
     const { setMeta } = useNoteScreenContext();
@@ -173,11 +195,10 @@ function NoteScreenContent({ noteId, openImagesOnMount = false }: { noteId: stri
     const openImagePanel = useCallback(() => {
         setImagePanelMounted(true);
         setImagePanelOpen(true);
-        Animated.spring(panelAnim, {
+        Animated.timing(panelAnim, {
             toValue: 1,
-            damping: 18,
-            stiffness: 210,
-            mass: 0.9,
+            duration: 360,
+            easing: Easing.bezier(0.22, 1, 0.36, 1),
             useNativeDriver: true,
         }).start();
     }, [panelAnim]);
@@ -192,7 +213,8 @@ function NoteScreenContent({ noteId, openImagesOnMount = false }: { noteId: stri
         if (!imagePanelMounted) return;
         Animated.timing(panelAnim, {
             toValue: 0,
-            duration: 185,
+            duration: 280,
+            easing: Easing.bezier(0.4, 0, 0.2, 1),
             useNativeDriver: true,
         }).start(({ finished }) => {
             if (!finished) return;
@@ -200,6 +222,11 @@ function NoteScreenContent({ noteId, openImagesOnMount = false }: { noteId: stri
             setImagePanelMounted(false);
         });
     }, [imagePanelMounted, panelAnim]);
+
+    useEffect(() => {
+        if (isFocused) return;
+        closeImagePanel();
+    }, [isFocused, closeImagePanel]);
 
     const addFromLibrary = async () => {
         if (!canEdit) return;
@@ -225,6 +252,7 @@ function NoteScreenContent({ noteId, openImagesOnMount = false }: { noteId: stri
 
     const addFromCamera = async () => {
         if (!canEdit) return;
+        if (!isFocused) return;
 
         const permission = await ImagePicker.requestCameraPermissionsAsync();
         if (!permission.granted) {
@@ -287,12 +315,12 @@ function NoteScreenContent({ noteId, openImagesOnMount = false }: { noteId: stri
 
     const dimOpacity = panelAnim.interpolate({
         inputRange: [0, 1],
-        outputRange: [0, 0.18],
+        outputRange: [0, 0.24],
     });
 
     const handleScale = panelAnim.interpolate({
         inputRange: [0, 1],
-        outputRange: [1, 0.97],
+        outputRange: [1, 1.01],
     });
     const handleOpacity = panelAnim.interpolate({
         inputRange: [0, 1],
@@ -363,9 +391,9 @@ function NoteScreenContent({ noteId, openImagesOnMount = false }: { noteId: stri
                     style={({ pressed }) => [
                         styles.imagesHandle,
                         {
-                            borderColor: colors.border,
                             backgroundColor: colors.elevated,
                             opacity: pressed ? 0.9 : 1,
+                            transform: [{ scale: pressed ? 0.988 : 1 }],
                         },
                         Shadow.near,
                     ]}
@@ -396,7 +424,6 @@ function NoteScreenContent({ noteId, openImagesOnMount = false }: { noteId: stri
                             {
                                 width: panelWidth,
                                 backgroundColor: colors.elevated,
-                                borderColor: colors.border,
                                 paddingTop: insets.top + Spacing.S,
                                 transform: [{ translateX: panelTranslateX }],
                             },
@@ -425,9 +452,9 @@ function NoteScreenContent({ noteId, openImagesOnMount = false }: { noteId: stri
                                         style={({ pressed }) => [
                                             styles.panelActionBtn,
                                             {
-                                                borderColor: colors.border,
                                                 backgroundColor: colors.s1,
-                                                opacity: isUploadingImages || pressed ? 0.75 : 1,
+                                                opacity: isUploadingImages || pressed ? 0.82 : 1,
+                                                transform: [{ scale: pressed ? 0.988 : 1 }],
                                             },
                                         ]}
                                     >
@@ -440,9 +467,9 @@ function NoteScreenContent({ noteId, openImagesOnMount = false }: { noteId: stri
                                         style={({ pressed }) => [
                                             styles.panelActionBtn,
                                             {
-                                                borderColor: colors.border,
                                                 backgroundColor: colors.s1,
-                                                opacity: isUploadingImages || pressed ? 0.75 : 1,
+                                                opacity: isUploadingImages || pressed ? 0.82 : 1,
+                                                transform: [{ scale: pressed ? 0.988 : 1 }],
                                             },
                                         ]}
                                     >
@@ -486,7 +513,8 @@ function NoteScreenContent({ noteId, openImagesOnMount = false }: { noteId: stri
                                             {
                                                 backgroundColor: colors.primary,
                                                 opacity:
-                                                    isUploadingImages || stagedImages.length === 0 || pressed ? 0.75 : 1,
+                                                    isUploadingImages || stagedImages.length === 0 || pressed ? 0.82 : 1,
+                                                transform: [{ scale: pressed ? 0.988 : 1 }],
                                             },
                                         ]}
                                     >
@@ -510,7 +538,7 @@ function NoteScreenContent({ noteId, openImagesOnMount = false }: { noteId: stri
                                             source={{ uri: image.public_url }}
                                             style={styles.uploadedImage}
                                             contentFit="cover"
-                                            transition={120}
+                                            transition={420}
                                         />
                                     ))}
                                 </View>
@@ -528,6 +556,10 @@ function NoteScreenContent({ noteId, openImagesOnMount = false }: { noteId: stri
 const styles = StyleSheet.create({
     screen: {
         flex: 1,
+    },
+    loaderWrap: {
+        alignItems: "center",
+        justifyContent: "center",
     },
     container: {
         flexGrow: 1,
@@ -567,8 +599,6 @@ const styles = StyleSheet.create({
         borderBottomLeftRadius: 22,
         borderTopRightRadius: 0,
         borderBottomRightRadius: 0,
-        borderRightWidth: 0,
-        borderWidth: 1,
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
@@ -599,7 +629,6 @@ const styles = StyleSheet.create({
         top: 0,
         right: 0,
         bottom: 0,
-        borderLeftWidth: 1,
         paddingHorizontal: Spacing.S,
     },
     panelHeader: {
@@ -627,7 +656,6 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     panelActionBtn: {
-        borderWidth: 1,
         borderRadius: Radius.input,
         minHeight: 42,
         alignItems: "center",
